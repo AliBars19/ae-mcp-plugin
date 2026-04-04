@@ -26,8 +26,9 @@ export class Bridge {
   private reconnectDelay = 1000;
   private maxReconnectDelay = 30000;
   private url: string;
-  private connecting = false;
+  private connectPromise: Promise<void> | null = null;
   private closed = false;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(port: number = 9741) {
     this.url = `ws://127.0.0.1:${port}`;
@@ -35,16 +36,16 @@ export class Bridge {
 
   async connect(): Promise<void> {
     if (this.ws?.readyState === WebSocket.OPEN) return;
-    if (this.connecting) return;
 
-    this.connecting = true;
+    // If already connecting, wait for the in-flight attempt
+    if (this.connectPromise) return this.connectPromise;
 
-    return new Promise((resolve, reject) => {
+    this.connectPromise = new Promise<void>((resolve, reject) => {
       try {
         this.ws = new WebSocket(this.url);
 
         this.ws.on("open", () => {
-          this.connecting = false;
+          this.connectPromise = null;
           this.reconnectDelay = 1000;
           resolve();
         });
@@ -54,27 +55,35 @@ export class Bridge {
         });
 
         this.ws.on("close", () => {
-          this.connecting = false;
+          this.connectPromise = null;
           this.rejectAllPending("Connection closed");
           if (!this.closed) this.scheduleReconnect();
         });
 
         this.ws.on("error", (err: Error) => {
-          this.connecting = false;
+          this.connectPromise = null;
           if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
             reject(new Error(`Cannot connect to AE bridge at ${this.url}: ${err.message}`));
           }
+          // Close the socket so the close handler fires for cleanup
+          try { this.ws?.close(); } catch { /* already closing */ }
         });
       } catch (err) {
-        this.connecting = false;
+        this.connectPromise = null;
         reject(err);
       }
     });
+
+    return this.connectPromise;
   }
 
   private scheduleReconnect(): void {
     if (this.closed) return;
-    setTimeout(() => {
+    // Prevent multiple overlapping reconnect timers
+    if (this.reconnectTimer) return;
+
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
       this.connect().catch(() => {
         // Silently retry — scheduleReconnect will be called again on close
       });
@@ -97,7 +106,10 @@ export class Bridge {
     clearTimeout(pending.timer);
 
     if (response.error) {
-      pending.reject(new Error(response.error.message));
+      const msg = response.error.data
+        ? `${response.error.message} (${JSON.stringify(response.error.data)})`
+        : response.error.message;
+      pending.reject(new Error(msg));
     } else {
       pending.resolve(response.result);
     }
@@ -114,6 +126,12 @@ export class Bridge {
   async send(method: string, params: Record<string, unknown> = {}, timeout = 30000): Promise<unknown> {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
       await this.connect();
+    }
+
+    // Null-safe check after connect — connection could have dropped between await and here
+    const socket = this.ws;
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+      throw new Error("Not connected to AE bridge");
     }
 
     const id = String(++this.requestId);
@@ -133,7 +151,7 @@ export class Bridge {
         params,
       });
 
-      this.ws!.send(message, (err) => {
+      socket.send(message, (err) => {
         if (err) {
           this.pending.delete(id);
           clearTimeout(timer);
@@ -149,6 +167,10 @@ export class Bridge {
 
   close(): void {
     this.closed = true;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
     this.rejectAllPending("Bridge closing");
     if (this.ws) {
       this.ws.close();

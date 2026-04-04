@@ -2,30 +2,36 @@ import { z } from "zod";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { homedir } from "node:os";
 import lockfile from "proper-lockfile";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { Bridge } from "../bridge.js";
 
-const CONTEXT_DIR = join(process.env.APPDATA || "", "Apollova");
+const CONTEXT_DIR = join(process.env.APPDATA || join(homedir(), "AppData", "Roaming"), "Apollova");
 const CONTEXT_FILE = join(CONTEXT_DIR, "ae-mcp-context.json");
 
 async function ensureContextDir(): Promise<void> {
-  if (!existsSync(CONTEXT_DIR)) {
-    await mkdir(CONTEXT_DIR, { recursive: true });
-  }
+  await mkdir(CONTEXT_DIR, { recursive: true });
 }
 
 async function readContext(): Promise<Record<string, unknown>> {
   await ensureContextDir();
   if (!existsSync(CONTEXT_FILE)) return {};
-  const raw = await readFile(CONTEXT_FILE, "utf-8");
-  return JSON.parse(raw);
+  try {
+    const raw = await readFile(CONTEXT_FILE, "utf-8");
+    return JSON.parse(raw);
+  } catch {
+    // Corrupted file — reset to empty
+    return {};
+  }
 }
 
-async function writeContext(data: Record<string, unknown>): Promise<void> {
+async function writeContext(data: Record<string, unknown>): Promise<string> {
   await ensureContextDir();
-  data._updated = new Date().toISOString();
-  await writeFile(CONTEXT_FILE, JSON.stringify(data, null, 2), "utf-8");
+  const timestamp = new Date().toISOString();
+  const output = { ...data, _updated: timestamp };
+  await writeFile(CONTEXT_FILE, JSON.stringify(output, null, 2), "utf-8");
+  return timestamp;
 }
 
 export function registerContextTools(server: McpServer, _bridge: Bridge): void {
@@ -44,7 +50,7 @@ export function registerContextTools(server: McpServer, _bridge: Bridge): void {
     "ae_write_shared_context",
     "Write a key-value pair to the shared context file. File-locked for safe concurrent access.",
     {
-      key: z.string().describe("Key to write"),
+      key: z.string().min(1).describe("Key to write"),
       value: z.unknown().describe("Value to store (any JSON-serializable value)"),
     },
     async ({ key, value }) => {
@@ -64,12 +70,12 @@ export function registerContextTools(server: McpServer, _bridge: Bridge): void {
 
         const data = await readContext();
         data[key] = value;
-        await writeContext(data);
+        const timestamp = await writeContext(data);
 
         return {
           content: [{
             type: "text",
-            text: JSON.stringify({ success: true, timestamp: data._updated }, null, 2),
+            text: JSON.stringify({ success: true, timestamp }, null, 2),
           }],
         };
       } finally {

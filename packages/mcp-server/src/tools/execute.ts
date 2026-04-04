@@ -7,7 +7,7 @@ export function registerExecuteTools(server: McpServer, bridge: Bridge): void {
   server.tool(
     "ae_eval_extendscript",
     "Execute arbitrary ExtendScript code in After Effects and return the result",
-    { code: z.string().describe("ExtendScript code to evaluate") },
+    { code: z.string().min(1).describe("ExtendScript code to evaluate") },
     async ({ code }) => {
       const result = await bridge.send("execute.eval", { code });
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
@@ -17,7 +17,7 @@ export function registerExecuteTools(server: McpServer, bridge: Bridge): void {
   server.tool(
     "ae_run_jsx_file",
     "Execute a JSX file from disk in After Effects via $.evalFile()",
-    { path: z.string().describe("Absolute file path to the JSX file") },
+    { path: z.string().min(1).describe("Absolute file path to the JSX file") },
     async ({ path }) => {
       const result = await bridge.send("execute.runFile", { path });
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
@@ -28,7 +28,7 @@ export function registerExecuteTools(server: McpServer, bridge: Bridge): void {
     "ae_validate_jsx_file",
     "Validate a JSX file: syntax check + optional dry-run (experimental — wraps in undo group). Reports errors and warnings.",
     {
-      path: z.string().describe("Absolute file path to the JSX file"),
+      path: z.string().min(1).describe("Absolute file path to the JSX file"),
       dryRun: z.boolean().optional().default(false).describe("Run the file in an undo group then revert (experimental)"),
     },
     async ({ path, dryRun }) => {
