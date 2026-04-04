@@ -401,6 +401,39 @@ function __bridge_getRenderQueue() {
 }
 
 
+// ── Save Comp Frame as PNG ──
+function __bridge_saveCompFrame(compName, time, outputPath) {
+    try {
+        var comp = __findComp(compName);
+        if (!comp) return JSON.stringify({ success: false, error: "Comp not found: " + compName });
+
+        var outFile = new File(outputPath);
+        // Ensure output directory exists
+        var outDir = outFile.parent;
+        if (!outDir.exists) outDir.create();
+
+        // saveFrameToPng available in AE 2024+
+        if (typeof comp.saveFrameToPng === "function") {
+            comp.saveFrameToPng(time, outFile);
+            return JSON.stringify({
+                success: true,
+                path: outFile.fsName,
+                width: comp.width,
+                height: comp.height,
+                time: time
+            });
+        } else {
+            return JSON.stringify({
+                success: false,
+                error: "saveFrameToPng not available (requires AE 2024+)"
+            });
+        }
+    } catch (e) {
+        return JSON.stringify({ success: false, error: e.toString() });
+    }
+}
+
+
 // ═══════════════════════════════════════════════════
 // INTERNAL HELPERS
 // ═══════════════════════════════════════════════════

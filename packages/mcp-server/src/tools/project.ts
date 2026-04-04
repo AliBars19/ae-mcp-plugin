@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { Bridge } from "../bridge.js";
 
@@ -32,6 +34,22 @@ export function registerProjectTools(server: McpServer, bridge: Bridge): void {
     },
     async ({ query, type }) => {
       const result = await bridge.send("project.search", { query, type: type || "" });
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    }
+  );
+
+  server.tool(
+    "ae_get_comp_thumbnail",
+    "Save a frame from a composition as PNG. Returns the file path and dimensions.",
+    {
+      comp: z.string().describe("Composition name"),
+      time: z.number().optional().default(0).describe("Time in seconds (default: 0)"),
+    },
+    async ({ comp, time }) => {
+      const filename = `ae-frame-${comp.replace(/[^a-zA-Z0-9]/g, "_")}-${time.toFixed(2)}.png`;
+      const outputPath = join(tmpdir(), "apollova-frames", filename);
+
+      const result = await bridge.send("comp.saveFrame", { comp, time, outputPath });
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     }
   );

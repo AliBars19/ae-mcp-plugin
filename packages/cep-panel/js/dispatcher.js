@@ -161,6 +161,18 @@ function createDispatcher(evalExtendScript, log, updateRender) {
             }
         },
 
+        "comp.saveFrame": function (params) {
+            var comp = escapeForJSX(params.comp || "");
+            var time = Number(params.time) || 0;
+            var outputPath = params.outputPath || "";
+            if (outputPath.indexOf("..") !== -1) {
+                return Promise.reject(new Error("Path traversal not allowed"));
+            }
+            return evalJSON(
+                '__bridge_saveCompFrame("' + comp + '", ' + time + ', "' + escapeForJSX(outputPath) + '")'
+            );
+        },
+
         // ─── Context ───
         "context.read": function (params) {
             var key = params.key || null;
