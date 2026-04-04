@@ -29,6 +29,7 @@ export class Bridge {
   private connectPromise: Promise<void> | null = null;
   private closed = false;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private startTime = Date.now();
 
   constructor(port: number = 9741) {
     this.url = `ws://127.0.0.1:${port}`;
@@ -166,6 +167,10 @@ export class Bridge {
 
   get isConnected(): boolean {
     return this.ws?.readyState === WebSocket.OPEN;
+  }
+
+  get uptime(): number {
+    return Math.floor((Date.now() - this.startTime) / 1000);
   }
 
   close(): void {
