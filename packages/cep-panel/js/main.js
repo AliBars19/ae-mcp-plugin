@@ -101,7 +101,49 @@
                 updateClientCount();
                 log("Client connected (" + clients.size + " total)", "info");
 
+                // Auth state for this socket
+                var authenticated = false;
+                var authTimeout = setTimeout(function () {
+                    if (!authenticated) {
+                        log("Auth timeout — disconnecting client", "error");
+                        socket.close(4001, "Authentication timeout");
+                    }
+                }, 5000);
+
+                // Check if auth is disabled via env
+                var authDisabled = process.env.AE_MCP_AUTH === "0";
+                if (authDisabled) {
+                    authenticated = true;
+                    clearTimeout(authTimeout);
+                    log("Auth disabled (AE_MCP_AUTH=0)", "info");
+                }
+
                 socket.on("message", function (raw) {
+                    // Handle auth message
+                    if (!authenticated) {
+                        try {
+                            var authMsg = JSON.parse(raw.toString());
+                            if (authMsg.type === "auth" && authMsg.token) {
+                                var secret = window.__bridgeAuth.loadOrCreateSecret();
+                                if (window.__bridgeAuth.validateToken(authMsg.token, secret)) {
+                                    authenticated = true;
+                                    clearTimeout(authTimeout);
+                                    log("Client authenticated", "success");
+                                    socket.send(JSON.stringify({ type: "auth", success: true }));
+                                } else {
+                                    log("Invalid auth token", "error");
+                                    socket.close(4001, "Invalid token");
+                                }
+                            } else {
+                                log("Expected auth message, got: " + (authMsg.method || "unknown"), "error");
+                                socket.close(4001, "Authentication required");
+                            }
+                        } catch (e) {
+                            socket.close(4001, "Invalid auth message");
+                        }
+                        return;
+                    }
+
                     totalCmds++;
                     cmdCount.textContent = String(totalCmds);
 
@@ -156,6 +198,7 @@
                 });
 
                 socket.on("close", function () {
+                    clearTimeout(authTimeout);
                     clients.delete(socket);
                     updateClientCount();
                     log("Client disconnected (" + clients.size + " remaining)", "info");

@@ -5,6 +5,8 @@
  * Auto-reconnects on disconnect with exponential backoff.
  */
 import WebSocket from "ws";
+import { readFileSync, existsSync } from "node:fs";
+import { join } from "node:path";
 
 interface PendingRequest {
   resolve: (value: unknown) => void;
@@ -35,6 +37,48 @@ export class Bridge {
     this.url = `ws://127.0.0.1:${port}`;
   }
 
+  private loadSecret(): string | null {
+    const secretPath = join(process.env.APPDATA || "", "Apollova", "bridge-secret.json");
+    try {
+      if (!existsSync(secretPath)) return null;
+      const data = JSON.parse(readFileSync(secretPath, "utf-8"));
+      return data?.token ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  private async authenticate(ws: WebSocket): Promise<void> {
+    if (process.env.AE_MCP_AUTH === "0") return;
+
+    const token = this.loadSecret();
+    if (!token) return; // No secret file yet — skip auth (first run)
+
+    return new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error("Authentication timeout"));
+      }, 5000);
+
+      const handler = (data: WebSocket.RawData) => {
+        clearTimeout(timeout);
+        ws.removeListener("message", handler);
+        try {
+          const msg = JSON.parse(data.toString());
+          if (msg.type === "auth" && msg.success) {
+            resolve();
+          } else {
+            reject(new Error("Authentication failed"));
+          }
+        } catch {
+          reject(new Error("Invalid auth response"));
+        }
+      };
+
+      ws.on("message", handler);
+      ws.send(JSON.stringify({ type: "auth", token }));
+    });
+  }
+
   async connect(): Promise<void> {
     if (this.ws?.readyState === WebSocket.OPEN) return;
 
@@ -46,9 +90,16 @@ export class Bridge {
         this.ws = new WebSocket(this.url);
 
         this.ws.on("open", () => {
-          this.connectPromise = null;
-          this.reconnectDelay = 1000;
-          resolve();
+          this.authenticate(this.ws!)
+            .then(() => {
+              this.connectPromise = null;
+              this.reconnectDelay = 1000;
+              resolve();
+            })
+            .catch((err) => {
+              this.connectPromise = null;
+              reject(new Error(`Authentication failed: ${err.message}`));
+            });
         });
 
         this.ws.on("message", (data: WebSocket.RawData) => {
