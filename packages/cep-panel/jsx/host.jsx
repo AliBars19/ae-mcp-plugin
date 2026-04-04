@@ -7,32 +7,8 @@
  * All functions return JSON strings for safe transport back to JS.
  */
 
-// ── JSON polyfill (AE versions < 2024 may lack it) ──
-if (typeof JSON === "undefined") {
-    JSON = {};
-    JSON.parse = function (s) {
-        try { return eval("(" + s + ")"); }
-        catch (e) { return null; }
-    };
-    JSON.stringify = function (obj, replacer, space) {
-        var t = typeof obj;
-        if (t !== "object" || obj === null) {
-            if (t === "string") return '"' + obj.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n").replace(/\r/g, "\\r") + '"';
-            return String(obj);
-        }
-        var json = [], arr = (obj && obj.constructor === Array);
-        for (var n in obj) {
-            if (!obj.hasOwnProperty(n)) continue;
-            var v = obj[n];
-            t = typeof v;
-            if (t === "string") v = '"' + v.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n").replace(/\r/g, "\\r") + '"';
-            else if (t === "object" && v !== null) v = JSON.stringify(v);
-            else if (t === "undefined" || t === "function") continue;
-            json.push((arr ? "" : '"' + n + '":') + String(v));
-        }
-        return (arr ? "[" : "{") + String(json) + (arr ? "]" : "}");
-    };
-}
+// Note: JSON polyfill removed — this extension requires AE 2024+ (manifest.xml)
+// which ships with native JSON support. The eval-based polyfill was a security risk.
 
 
 // ── Project Info ──

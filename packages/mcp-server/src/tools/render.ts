@@ -17,8 +17,8 @@ export function registerRenderTools(server: McpServer, bridge: Bridge): void {
     "ae_monitor_render",
     "Poll render queue until all items complete or timeout. Returns final status of all items.",
     {
-      timeout: z.number().min(0).optional().default(60000).describe("Timeout in milliseconds (default 60s)"),
-      interval: z.number().min(100).optional().default(2000).describe("Poll interval in milliseconds (default 2s)"),
+      timeout: z.number().min(1000).max(600000).optional().default(60000).describe("Timeout in milliseconds (default 60s, max 10min)"),
+      interval: z.number().min(500).max(30000).optional().default(2000).describe("Poll interval in milliseconds (default 2s)"),
     },
     async ({ timeout, interval }) => {
       const result = await bridge.send("render.monitor", { timeout, interval }, timeout + 5000);

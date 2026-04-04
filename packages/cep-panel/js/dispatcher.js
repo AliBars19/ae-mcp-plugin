@@ -30,7 +30,11 @@ function createDispatcher(evalExtendScript, log, updateRender) {
             .replace(/'/g, "\\'")
             .replace(/"/g, '\\"')
             .replace(/\n/g, "\\n")
-            .replace(/\r/g, "\\r");
+            .replace(/\r/g, "\\r")
+            .replace(/\t/g, "\\t")
+            .replace(/\0/g, "\\0")
+            .replace(/\u2028/g, "\\u2028")
+            .replace(/\u2029/g, "\\u2029");
     }
 
     // ── Method handlers ──
@@ -125,10 +129,16 @@ function createDispatcher(evalExtendScript, log, updateRender) {
 
         "render.checkOutput": function (params) {
             var filePath = params.path || "";
+            // Reject paths with traversal sequences
+            if (filePath.indexOf("..") !== -1) {
+                return Promise.reject(new Error("Path traversal not allowed"));
+            }
             // Use Node.js fs for file checks (CEP has Node.js runtime)
             try {
                 var fs = require("fs");
-                var stats = fs.statSync(filePath);
+                var path = require("path");
+                var resolved = path.resolve(filePath);
+                var stats = fs.statSync(resolved);
                 return Promise.resolve({
                     exists: true,
                     size: stats.size,
@@ -136,8 +146,7 @@ function createDispatcher(evalExtendScript, log, updateRender) {
                 });
             } catch (e) {
                 return Promise.resolve({
-                    exists: false,
-                    error: e.message
+                    exists: false
                 });
             }
         },

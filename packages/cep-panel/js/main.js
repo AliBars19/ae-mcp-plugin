@@ -90,7 +90,7 @@
     function startServer() {
         try {
             var WebSocketServer = require("ws").Server;
-            var wss = new WebSocketServer({ host: "127.0.0.1", port: WS_PORT });
+            var wss = new WebSocketServer({ host: "127.0.0.1", port: WS_PORT, maxPayload: 10 * 1024 * 1024 });
 
             wss.on("listening", function () {
                 log("WebSocket server listening on 127.0.0.1:" + WS_PORT, "success");

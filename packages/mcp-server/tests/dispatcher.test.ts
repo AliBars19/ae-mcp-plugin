@@ -99,7 +99,6 @@ describe("Dispatcher", () => {
       path: "/nonexistent/file.mp4",
     })) as any;
     expect(result.exists).toBe(false);
-    expect(result.error).toBeDefined();
   });
 
   // ── context.write ──

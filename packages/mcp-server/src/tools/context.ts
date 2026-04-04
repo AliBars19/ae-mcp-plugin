@@ -50,7 +50,7 @@ export function registerContextTools(server: McpServer, _bridge: Bridge): void {
     "ae_write_shared_context",
     "Write a key-value pair to the shared context file. File-locked for safe concurrent access.",
     {
-      key: z.string().min(1).describe("Key to write"),
+      key: z.string().min(1).max(128).regex(/^[a-zA-Z_][a-zA-Z0-9_]*$/, "Key must be alphanumeric with underscores").refine(k => k !== "_updated", "Cannot overwrite reserved key _updated").describe("Key to write"),
       value: z.unknown().describe("Value to store (any JSON-serializable value)"),
     },
     async ({ key, value }) => {
