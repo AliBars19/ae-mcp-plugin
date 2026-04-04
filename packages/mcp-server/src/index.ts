@@ -17,6 +17,7 @@ import { registerRenderTools } from "./tools/render.js";
 import { registerContextTools } from "./tools/context.js";
 import { registerHealthTools } from "./tools/health.js";
 import { registerValidateTools } from "./tools/validate.js";
+import { registerResources } from "./resources.js";
 
 const WS_PORT = parseInt(process.env.WS_PORT || "9741", 10);
 
@@ -36,6 +37,7 @@ registerRenderTools(server, bridge);
 registerContextTools(server, bridge);
 registerHealthTools(server, bridge);
 registerValidateTools(server, bridge);
+registerResources(server, bridge);
 
 // Start stdio transport
 async function main(): Promise<void> {
