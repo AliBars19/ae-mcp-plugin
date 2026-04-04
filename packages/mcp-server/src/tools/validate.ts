@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { Bridge } from "../bridge.js";
 
@@ -24,10 +25,16 @@ export function registerValidateTools(server: McpServer, bridge: Bridge): void {
       jobDataPath: z.string().min(1).describe("Path to job_data.json or onyx_data.json"),
     },
     async ({ comp, jobDataPath }) => {
+      // Path traversal prevention
+      if (jobDataPath.includes("..")) {
+        return { content: [{ type: "text", text: JSON.stringify({ valid: false, error: "Path traversal not allowed" }, null, 2) }] };
+      }
+      const resolvedPath = resolve(jobDataPath);
+
       // Read job data from disk
       let jobData: JobData;
       try {
-        const raw = await readFile(jobDataPath, "utf-8");
+        const raw = await readFile(resolvedPath, "utf-8");
         jobData = JSON.parse(raw);
       } catch (err) {
         return { content: [{ type: "text", text: JSON.stringify({ valid: false, error: `Cannot read job data: ${err}` }, null, 2) }] };

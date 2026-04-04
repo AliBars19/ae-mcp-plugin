@@ -314,12 +314,16 @@ function __bridge_validateJSXFile(filePath, dryRun) {
         var errors = [];
         var warnings = [];
 
-        // Basic syntax check via eval in a controlled scope
-        try {
-            // Wrap in function to catch syntax errors without executing
-            new Function(code);
-        } catch (e) {
-            errors.push("Syntax error: " + e.toString());
+        // Static syntax heuristics (no eval — new Function() would execute code)
+        var opens = (code.match(/\{/g) || []).length;
+        var closes = (code.match(/\}/g) || []).length;
+        if (Math.abs(opens - closes) > 2) {
+            errors.push("Mismatched braces: " + opens + " open, " + closes + " close");
+        }
+        var parensOpen = (code.match(/\(/g) || []).length;
+        var parensClose = (code.match(/\)/g) || []).length;
+        if (Math.abs(parensOpen - parensClose) > 2) {
+            errors.push("Mismatched parentheses: " + parensOpen + " open, " + parensClose + " close");
         }
 
         // Check for common issues
