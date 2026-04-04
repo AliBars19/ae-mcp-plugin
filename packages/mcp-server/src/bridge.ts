@@ -99,6 +99,9 @@ export class Bridge {
       return;
     }
 
+    // Guard against non-object parse results (e.g. JSON.parse("null"))
+    if (!response || typeof response !== "object") return;
+
     const pending = this.pending.get(response.id);
     if (!pending) return;
 
