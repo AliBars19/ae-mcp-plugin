@@ -25,6 +25,36 @@
     var clients     = new Set();
     var totalCmds   = 0;
 
+    var commandHistory = [];
+    var MAX_HISTORY = 50;
+
+    function addToHistory(method, params, duration, success) {
+        commandHistory.unshift({
+            method: method,
+            params: Object.keys(params || {}),
+            timestamp: new Date().toLocaleTimeString(),
+            duration: duration + "ms",
+            success: success
+        });
+        if (commandHistory.length > MAX_HISTORY) {
+            commandHistory.pop();
+        }
+        updateHistoryUI();
+    }
+
+    function updateHistoryUI() {
+        var historyEl = document.getElementById("historyArea");
+        if (!historyEl) return;
+        historyEl.innerHTML = "";
+        for (var i = 0; i < Math.min(commandHistory.length, 10); i++) {
+            var cmd = commandHistory[i];
+            var el = document.createElement("div");
+            el.className = "history-entry " + (cmd.success ? "success" : "error");
+            el.textContent = cmd.timestamp + " " + cmd.method + " (" + cmd.duration + ")";
+            historyEl.appendChild(el);
+        }
+    }
+
     // ── Logging ──
     function log(msg, type) {
         type = type || "info";
@@ -43,6 +73,7 @@
     function updateClientCount() {
         clientCount.textContent = String(clients.size);
         if (clients.size > 0) {
+            statusDot.classList.remove("reconnecting");
             statusDot.classList.add("connected");
             statusLabel.textContent = clients.size + " client(s) connected";
         } else {
@@ -179,8 +210,11 @@
                         return;
                     }
 
+                    var startTime = Date.now();
                     dispatcher.handle(request.method, request.params || {})
                         .then(function (result) {
+                            var duration = Date.now() - startTime;
+                            addToHistory(request.method, request.params, duration, true);
                             socket.send(JSON.stringify({
                                 jsonrpc: "2.0",
                                 id: request.id,
@@ -188,6 +222,8 @@
                             }));
                         })
                         .catch(function (err) {
+                            var duration = Date.now() - startTime;
+                            addToHistory(request.method, request.params, duration, false);
                             log("Error: " + err.message, "error");
                             socket.send(JSON.stringify({
                                 jsonrpc: "2.0",
@@ -201,6 +237,11 @@
                     clearTimeout(authTimeout);
                     clients.delete(socket);
                     updateClientCount();
+                    if (clients.size === 0) {
+                        statusDot.classList.add("reconnecting");
+                        statusDot.classList.remove("connected");
+                        statusLabel.textContent = "Reconnecting...";
+                    }
                     log("Client disconnected (" + clients.size + " remaining)", "info");
                 });
 

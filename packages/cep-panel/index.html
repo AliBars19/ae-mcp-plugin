@@ -42,6 +42,14 @@
             transition: background 0.3s;
         }
         .status-dot.connected { background: #a6e3a1; }
+        .status-dot.reconnecting {
+            background: #f9e2af;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
         .status-label { color: #a6adc8; }
 
         .stats {
@@ -110,7 +118,7 @@
             padding: 8px;
             font-family: "Cascadia Code", "Consolas", monospace;
             font-size: 10px;
-            height: 160px;
+            height: 120px;
             overflow-y: auto;
             white-space: pre-wrap;
             word-break: break-all;
@@ -119,6 +127,22 @@
         .log-entry.error { color: #f38ba8; }
         .log-entry.success { color: #a6e3a1; }
         .log-entry.info { color: #89b4fa; }
+
+        .history-section { margin-bottom: 12px; }
+        .history-section h3 { font-size: 11px; color: #a6adc8; margin-bottom: 4px; }
+        .history-area {
+            background: #11111b;
+            border: 1px solid #313244;
+            border-radius: 6px;
+            padding: 6px;
+            font-family: "Cascadia Code", "Consolas", monospace;
+            font-size: 10px;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+        .history-entry { padding: 2px 4px; border-radius: 3px; margin-bottom: 2px; }
+        .history-entry.success { color: #a6e3a1; }
+        .history-entry.error { color: #f38ba8; }
     </style>
 </head>
 <body>
@@ -149,6 +173,11 @@
             <div class="render-bar-fill" id="renderBar"></div>
         </div>
         <div class="render-status" id="renderStatus">Idle</div>
+    </div>
+
+    <div class="history-section">
+        <h3>Command History</h3>
+        <div class="history-area" id="historyArea"></div>
     </div>
 
     <div class="log-section">
