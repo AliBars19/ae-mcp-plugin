@@ -268,6 +268,33 @@ function __bridge_evalExpressionAtTime(compName, layerNameOrIndex, propertyPath,
 }
 
 
+// ── Evaluate Expression at Multiple Times ──
+function __bridge_evalExpressionAtTimes(compName, layerNameOrIndex, propertyPath, timesJSON) {
+    try {
+        var comp = __findComp(compName);
+        if (!comp) return JSON.stringify({ error: "Comp not found: " + compName });
+        var layer = __findLayer(comp, layerNameOrIndex);
+        if (!layer) return JSON.stringify({ error: "Layer not found: " + layerNameOrIndex });
+        var prop = __navigateProperty(layer, propertyPath);
+        if (!prop) return JSON.stringify({ error: "Property not found: " + propertyPath });
+
+        var times = JSON.parse(timesJSON);
+        var results = [];
+        for (var i = 0; i < times.length; i++) {
+            try {
+                var val = prop.valueAtTime(times[i], false);
+                results.push({ time: times[i], value: val, error: null });
+            } catch (e) {
+                results.push({ time: times[i], value: null, error: e.toString() });
+            }
+        }
+        return JSON.stringify(results);
+    } catch (e) {
+        return JSON.stringify({ error: e.toString() });
+    }
+}
+
+
 // ── Validate JSX File ──
 function __bridge_validateJSXFile(filePath, dryRun) {
     try {

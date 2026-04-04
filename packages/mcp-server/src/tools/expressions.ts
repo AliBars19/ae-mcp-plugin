@@ -30,4 +30,19 @@ export function registerExpressionTools(server: McpServer, bridge: Bridge): void
       return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
     }
   );
+
+  server.tool(
+    "ae_eval_expression_at_times",
+    "Evaluate a property at multiple timestamps in one call. Returns array of {time, value, error} objects.",
+    {
+      comp: z.string().describe("Composition name"),
+      layer: z.string().describe("Layer name or index"),
+      property: z.string().describe("Property path"),
+      times: z.array(z.number()).min(1).max(100).describe("Array of times in seconds"),
+    },
+    async ({ comp, layer, property, times }) => {
+      const result = await bridge.send("expressions.evalAtTimes", { comp, layer, property, times });
+      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+    }
+  );
 }

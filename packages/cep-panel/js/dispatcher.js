@@ -84,6 +84,16 @@ function createDispatcher(evalExtendScript, log, updateRender) {
             );
         },
 
+        "expressions.evalAtTimes": function (params) {
+            var comp = escapeForJSX(params.comp || "");
+            var layer = escapeForJSX(params.layer || "");
+            var property = escapeForJSX(params.property || "");
+            var times = JSON.stringify(params.times || []);
+            return evalJSON(
+                '__bridge_evalExpressionAtTimes("' + comp + '", "' + layer + '", "' + property + '", \'' + times + '\')'
+            );
+        },
+
         // ─── Execute ───
         "execute.eval": function (params) {
             var code = params.code || "";
