@@ -1,0 +1,182 @@
+/**
+ * AE MCP Bridge — CEP Panel Entry Point
+ *
+ * Starts a WebSocket server on 127.0.0.1:9741 that accepts JSON-RPC
+ * requests from the MCP server and routes them to ExtendScript via
+ * csInterface.evalScript().
+ */
+/* global CSInterface */
+
+(function () {
+    "use strict";
+
+    var cs = new CSInterface();
+    var WS_PORT = 9741;
+
+    // ── UI refs ──
+    var statusDot   = document.getElementById("statusDot");
+    var statusLabel  = document.getElementById("statusLabel");
+    var clientCount  = document.getElementById("clientCount");
+    var cmdCount     = document.getElementById("cmdCount");
+    var renderBar    = document.getElementById("renderBar");
+    var renderStatus = document.getElementById("renderStatus");
+    var logArea      = document.getElementById("logArea");
+
+    var clients     = new Set();
+    var totalCmds   = 0;
+
+    // ── Logging ──
+    function log(msg, type) {
+        type = type || "info";
+        var ts = new Date().toLocaleTimeString();
+        var el = document.createElement("div");
+        el.className = "log-entry " + type;
+        el.textContent = "[" + ts + "] " + msg;
+        logArea.appendChild(el);
+        logArea.scrollTop = logArea.scrollHeight;
+        // Keep last 200 entries
+        while (logArea.children.length > 200) {
+            logArea.removeChild(logArea.firstChild);
+        }
+    }
+
+    function updateClientCount() {
+        clientCount.textContent = String(clients.size);
+        if (clients.size > 0) {
+            statusDot.classList.add("connected");
+            statusLabel.textContent = clients.size + " client(s) connected";
+        } else {
+            statusDot.classList.remove("connected");
+            statusLabel.textContent = "Waiting for connection...";
+        }
+    }
+
+    // ── ExtendScript bridge ──
+    function evalExtendScript(code) {
+        return new Promise(function (resolve, reject) {
+            cs.evalScript(code, function (result) {
+                if (result === "EvalScript error.") {
+                    reject(new Error("ExtendScript evaluation error"));
+                } else {
+                    resolve(result);
+                }
+            });
+        });
+    }
+
+    // ── Dispatcher (imported) ──
+    var dispatcher = null;
+
+    function loadDispatcher() {
+        // dispatcher.js must be loaded after main.js sets up evalExtendScript
+        var script = document.createElement("script");
+        script.src = "js/dispatcher.js";
+        script.onload = function () {
+            if (typeof window.createDispatcher === "function") {
+                dispatcher = window.createDispatcher(evalExtendScript, log, updateRender);
+                log("Dispatcher loaded", "success");
+            }
+        };
+        document.head.appendChild(script);
+    }
+
+    // ── Render progress update ──
+    function updateRender(progress, status) {
+        renderBar.style.width = Math.min(100, Math.max(0, progress)) + "%";
+        renderStatus.textContent = status || "Idle";
+    }
+
+    // ── WebSocket server ──
+    function startServer() {
+        try {
+            var WebSocketServer = require("ws").Server;
+            var wss = new WebSocketServer({ host: "127.0.0.1", port: WS_PORT });
+
+            wss.on("listening", function () {
+                log("WebSocket server listening on 127.0.0.1:" + WS_PORT, "success");
+            });
+
+            wss.on("connection", function (socket) {
+                clients.add(socket);
+                updateClientCount();
+                log("Client connected (" + clients.size + " total)", "info");
+
+                socket.on("message", function (raw) {
+                    totalCmds++;
+                    cmdCount.textContent = String(totalCmds);
+
+                    var request;
+                    try {
+                        request = JSON.parse(raw.toString());
+                    } catch (e) {
+                        socket.send(JSON.stringify({
+                            jsonrpc: "2.0",
+                            id: null,
+                            error: { code: -32700, message: "Parse error" }
+                        }));
+                        return;
+                    }
+
+                    if (!request.method || !request.id) {
+                        socket.send(JSON.stringify({
+                            jsonrpc: "2.0",
+                            id: request.id || null,
+                            error: { code: -32600, message: "Invalid request" }
+                        }));
+                        return;
+                    }
+
+                    log(request.method, "info");
+
+                    if (!dispatcher) {
+                        socket.send(JSON.stringify({
+                            jsonrpc: "2.0",
+                            id: request.id,
+                            error: { code: -32603, message: "Dispatcher not ready" }
+                        }));
+                        return;
+                    }
+
+                    dispatcher.handle(request.method, request.params || {})
+                        .then(function (result) {
+                            socket.send(JSON.stringify({
+                                jsonrpc: "2.0",
+                                id: request.id,
+                                result: result
+                            }));
+                        })
+                        .catch(function (err) {
+                            log("Error: " + err.message, "error");
+                            socket.send(JSON.stringify({
+                                jsonrpc: "2.0",
+                                id: request.id,
+                                error: { code: -32603, message: err.message }
+                            }));
+                        });
+                });
+
+                socket.on("close", function () {
+                    clients.delete(socket);
+                    updateClientCount();
+                    log("Client disconnected (" + clients.size + " remaining)", "info");
+                });
+
+                socket.on("error", function (err) {
+                    log("Socket error: " + err.message, "error");
+                });
+            });
+
+            wss.on("error", function (err) {
+                log("Server error: " + err.message, "error");
+            });
+
+        } catch (err) {
+            log("Failed to start server: " + err.message, "error");
+        }
+    }
+
+    // ── Init ──
+    log("Initializing AE MCP Bridge...", "info");
+    loadDispatcher();
+    startServer();
+})();
