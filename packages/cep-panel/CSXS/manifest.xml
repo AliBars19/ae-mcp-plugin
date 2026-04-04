@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ExtensionManifest xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   Version="12.0"
+                   ExtensionBundleId="com.apollova.ae.bridge"
+                   ExtensionBundleName="AE MCP Bridge"
+                   ExtensionBundleVersion="0.1.0">
+
+    <ExtensionList>
+        <Extension Id="com.apollova.ae.bridge.panel" Version="0.1.0" />
+    </ExtensionList>
+
+    <ExecutionEnvironment>
+        <HostList>
+            <!-- After Effects 2024 (24.0) through 2027 (27.99) -->
+            <Host Name="AEFT" Version="[24.0,27.99]" />
+        </HostList>
+        <LocaleList>
+            <Locale Code="All" />
+        </LocaleList>
+        <RequiredRuntimeList>
+            <RequiredRuntime Name="CSXS" Version="12.0" />
+        </RequiredRuntimeList>
+    </ExecutionEnvironment>
+
+    <DispatchInfoList>
+        <Extension Id="com.apollova.ae.bridge.panel">
+            <DispatchInfo>
+                <Resources>
+                    <MainPath>./index.html</MainPath>
+                    <ScriptPath>./jsx/host.jsx</ScriptPath>
+                    <CEFCommandLine>
+                        <Parameter>--enable-nodejs</Parameter>
+                        <Parameter>--mixed-context</Parameter>
+                    </CEFCommandLine>
+                </Resources>
+                <Lifecycle>
+                    <AutoVisible>true</AutoVisible>
+                    <StartOn>
+                        <Event>com.adobe.csxs.events.ApplicationActivate</Event>
+                    </StartOn>
+                </Lifecycle>
+                <UI>
+                    <Type>Panel</Type>
+                    <Menu>AE MCP Bridge</Menu>
+                    <Geometry>
+                        <Size>
+                            <Width>300</Width>
+                            <Height>400</Height>
+                        </Size>
+                        <MinSize>
+                            <Width>250</Width>
+                            <Height>200</Height>
+                        </MinSize>
+                    </Geometry>
+                    <Icons />
+                </UI>
+            </DispatchInfo>
+        </Extension>
+    </DispatchInfoList>
+</ExtensionManifest>

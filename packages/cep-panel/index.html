@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>AE MCP Bridge</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: "Segoe UI", Arial, sans-serif;
+            font-size: 12px;
+            background: #1e1e2e;
+            color: #cdd6f4;
+            padding: 12px;
+            overflow: hidden;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #313244;
+        }
+        .header h1 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #89b4fa;
+        }
+
+        .status-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #f38ba8;
+            transition: background 0.3s;
+        }
+        .status-dot.connected { background: #a6e3a1; }
+        .status-label { color: #a6adc8; }
+
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+        .stat-box {
+            background: #313244;
+            border-radius: 6px;
+            padding: 8px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #89b4fa;
+        }
+        .stat-label {
+            font-size: 10px;
+            color: #a6adc8;
+            margin-top: 2px;
+        }
+
+        .render-section {
+            margin-bottom: 12px;
+        }
+        .render-section h3 {
+            font-size: 11px;
+            color: #a6adc8;
+            margin-bottom: 4px;
+        }
+        .render-bar-bg {
+            width: 100%;
+            height: 8px;
+            background: #313244;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .render-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #89b4fa, #a6e3a1);
+            border-radius: 4px;
+            transition: width 0.5s;
+        }
+        .render-status {
+            font-size: 10px;
+            color: #a6adc8;
+            margin-top: 3px;
+        }
+
+        .log-section {
+            flex: 1;
+        }
+        .log-section h3 {
+            font-size: 11px;
+            color: #a6adc8;
+            margin-bottom: 4px;
+        }
+        .log-area {
+            background: #11111b;
+            border: 1px solid #313244;
+            border-radius: 6px;
+            padding: 8px;
+            font-family: "Cascadia Code", "Consolas", monospace;
+            font-size: 10px;
+            height: 160px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: #a6adc8;
+        }
+        .log-entry.error { color: #f38ba8; }
+        .log-entry.success { color: #a6e3a1; }
+        .log-entry.info { color: #89b4fa; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>AE MCP Bridge</h1>
+        <span id="version" style="font-size:10px; color:#585b70;">v0.1.0</span>
+    </div>
+
+    <div class="status-row">
+        <div class="status-dot" id="statusDot"></div>
+        <span class="status-label" id="statusLabel">Waiting for connection...</span>
+    </div>
+
+    <div class="stats">
+        <div class="stat-box">
+            <div class="stat-value" id="clientCount">0</div>
+            <div class="stat-label">Clients</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-value" id="cmdCount">0</div>
+            <div class="stat-label">Commands</div>
+        </div>
+    </div>
+
+    <div class="render-section">
+        <h3>Render Progress</h3>
+        <div class="render-bar-bg">
+            <div class="render-bar-fill" id="renderBar"></div>
+        </div>
+        <div class="render-status" id="renderStatus">Idle</div>
+    </div>
+
+    <div class="log-section">
+        <h3>Activity Log</h3>
+        <div class="log-area" id="logArea"></div>
+    </div>
+
+    <script src="js/main.js"></script>
+</body>
+</html>
