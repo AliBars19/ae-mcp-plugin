@@ -1,0 +1,7 @@
+node_modules/
+dist/
+*.js.map
+.env
+*.tsbuildinfo
+packages/cep-panel/node_modules/
+!packages/cep-panel/node_modules/ws/

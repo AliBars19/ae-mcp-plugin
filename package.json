@@ -1,0 +1,14 @@
+{
+  "name": "ae-mcp-plugin",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Claude Code MCP server for Adobe After Effects",
+  "workspaces": [
+    "packages/mcp-server"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace=packages/mcp-server",
+    "test": "npm run test --workspace=packages/mcp-server",
+    "dev": "npm run dev --workspace=packages/mcp-server"
+  }
+}
