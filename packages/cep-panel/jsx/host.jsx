@@ -7,8 +7,31 @@
  * All functions return JSON strings for safe transport back to JS.
  */
 
-// Note: JSON polyfill removed — this extension requires AE 2024+ (manifest.xml)
-// which ships with native JSON support. The eval-based polyfill was a security risk.
+// Safe JSON serializer — no eval, single-line returns to avoid ExtendScript ASI bugs.
+function __escStr(v) { return v.replace(/\\/g,"\\\\").replace(/"/g,'\\"').replace(/\n/g,"\\n").replace(/\r/g,"\\r").replace(/\t/g,"\\t"); }
+function __JSON_stringify(val) {
+    if (val === null || val === undefined) { return "null"; }
+    var t = typeof val;
+    if (t === "boolean") { return val ? "true" : "false"; }
+    if (t === "number") { return isFinite(val) ? String(val) : "null"; }
+    if (t === "string") { return '"' + __escStr(val) + '"'; }
+    if (val instanceof Array) {
+        var arr = [];
+        for (var ai = 0; ai < val.length; ai++) { arr.push(__JSON_stringify(val[ai])); }
+        return "[" + arr.join(",") + "]";
+    }
+    if (t === "object") {
+        var pairs = [];
+        for (var k in val) {
+            if (val.hasOwnProperty(k)) {
+                var s = __JSON_stringify(val[k]);
+                if (s !== "null" || val[k] === null) { pairs.push('"' + k + '":' + s); }
+            }
+        }
+        return "{" + pairs.join(",") + "}";
+    }
+    return "null";
+}
 
 
 // ── Project Info ──
@@ -22,7 +45,7 @@ function __bridge_getProjectInfo() {
             if (item instanceof CompItem) numComps++;
             else if (item instanceof FolderItem) numFolders++;
         }
-        return JSON.stringify({
+        return __JSON_stringify({
             name: proj.file ? proj.file.name : "(Untitled)",
             path: proj.file ? proj.file.fsName : null,
             numItems: proj.numItems,
@@ -32,7 +55,7 @@ function __bridge_getProjectInfo() {
             buildName: app.buildName
         });
     } catch (e) {
-        return JSON.stringify({ error: e.toString() });
+        return __JSON_stringify({ error: e.toString() });
     }
 }
 
@@ -56,9 +79,9 @@ function __bridge_listComps(filter) {
                 numLayers: item.numLayers
             });
         }
-        return JSON.stringify(comps);
+        return __JSON_stringify(comps);
     } catch (e) {
-        return JSON.stringify({ error: e.toString() });
+        return __JSON_stringify({ error: e.toString() });
     }
 }
 
@@ -86,9 +109,9 @@ function __bridge_searchProject(query, type) {
                 parentFolder: item.parentFolder ? item.parentFolder.name : null
             });
         }
-        return JSON.stringify(results);
+        return __JSON_stringify(results);
     } catch (e) {
-        return JSON.stringify({ error: e.toString() });
+        return __JSON_stringify({ error: e.toString() });
     }
 }
 
@@ -97,7 +120,7 @@ function __bridge_searchProject(query, type) {
 function __bridge_listLayers(compName) {
     try {
         var comp = __findComp(compName);
-        if (!comp) return JSON.stringify({ error: "Comp not found: " + compName });
+        if (!comp) return __JSON_stringify({ error: "Comp not found: " + compName });
 
         var layers = [];
         for (var i = 1; i <= comp.numLayers; i++) {
@@ -126,9 +149,9 @@ function __bridge_listLayers(compName) {
                 locked: layer.locked
             });
         }
-        return JSON.stringify(layers);
+        return __JSON_stringify(layers);
     } catch (e) {
-        return JSON.stringify({ error: e.toString() });
+        return __JSON_stringify({ error: e.toString() });
     }
 }
 
@@ -137,10 +160,10 @@ function __bridge_listLayers(compName) {
 function __bridge_getLayerProperties(compName, layerNameOrIndex) {
     try {
         var comp = __findComp(compName);
-        if (!comp) return JSON.stringify({ error: "Comp not found: " + compName });
+        if (!comp) return __JSON_stringify({ error: "Comp not found: " + compName });
 
         var layer = __findLayer(comp, layerNameOrIndex);
-        if (!layer) return JSON.stringify({ error: "Layer not found: " + layerNameOrIndex });
+        if (!layer) return __JSON_stringify({ error: "Layer not found: " + layerNameOrIndex });
 
         var props = {
             name: layer.name,
@@ -207,9 +230,9 @@ function __bridge_getLayerProperties(compName, layerNameOrIndex) {
             }
         } catch (_) {}
 
-        return JSON.stringify(props);
+        return __JSON_stringify(props);
     } catch (e) {
-        return JSON.stringify({ error: e.toString() });
+        return __JSON_stringify({ error: e.toString() });
     }
 }
 
@@ -218,14 +241,14 @@ function __bridge_getLayerProperties(compName, layerNameOrIndex) {
 function __bridge_getExpressions(compName, layerNameOrIndex) {
     try {
         var comp = __findComp(compName);
-        if (!comp) return JSON.stringify({ error: "Comp not found: " + compName });
+        if (!comp) return __JSON_stringify({ error: "Comp not found: " + compName });
 
         var expressions = [];
 
         if (layerNameOrIndex) {
             // Single layer
             var layer = __findLayer(comp, layerNameOrIndex);
-            if (!layer) return JSON.stringify({ error: "Layer not found: " + layerNameOrIndex });
+            if (!layer) return __JSON_stringify({ error: "Layer not found: " + layerNameOrIndex });
             __collectExpressions(layer, "", expressions);
         } else {
             // All layers in comp
@@ -234,9 +257,9 @@ function __bridge_getExpressions(compName, layerNameOrIndex) {
             }
         }
 
-        return JSON.stringify(expressions);
+        return __JSON_stringify(expressions);
     } catch (e) {
-        return JSON.stringify({ error: e.toString() });
+        return __JSON_stringify({ error: e.toString() });
     }
 }
 
@@ -245,17 +268,17 @@ function __bridge_getExpressions(compName, layerNameOrIndex) {
 function __bridge_evalExpressionAtTime(compName, layerNameOrIndex, propertyPath, time) {
     try {
         var comp = __findComp(compName);
-        if (!comp) return JSON.stringify({ error: "Comp not found: " + compName });
+        if (!comp) return __JSON_stringify({ error: "Comp not found: " + compName });
 
         var layer = __findLayer(comp, layerNameOrIndex);
-        if (!layer) return JSON.stringify({ error: "Layer not found: " + layerNameOrIndex });
+        if (!layer) return __JSON_stringify({ error: "Layer not found: " + layerNameOrIndex });
 
         var prop = __navigateProperty(layer, propertyPath);
-        if (!prop) return JSON.stringify({ error: "Property not found: " + propertyPath });
+        if (!prop) return __JSON_stringify({ error: "Property not found: " + propertyPath });
 
         var value = prop.valueAtTime(time, false);
 
-        return JSON.stringify({
+        return __JSON_stringify({
             value: value,
             time: time,
             propertyPath: propertyPath,
@@ -263,7 +286,7 @@ function __bridge_evalExpressionAtTime(compName, layerNameOrIndex, propertyPath,
             expressionError: prop.expressionError || null
         });
     } catch (e) {
-        return JSON.stringify({ error: e.toString() });
+        return __JSON_stringify({ error: e.toString() });
     }
 }
 
@@ -272,13 +295,19 @@ function __bridge_evalExpressionAtTime(compName, layerNameOrIndex, propertyPath,
 function __bridge_evalExpressionAtTimes(compName, layerNameOrIndex, propertyPath, timesJSON) {
     try {
         var comp = __findComp(compName);
-        if (!comp) return JSON.stringify({ error: "Comp not found: " + compName });
+        if (!comp) return __JSON_stringify({ error: "Comp not found: " + compName });
         var layer = __findLayer(comp, layerNameOrIndex);
-        if (!layer) return JSON.stringify({ error: "Layer not found: " + layerNameOrIndex });
+        if (!layer) return __JSON_stringify({ error: "Layer not found: " + layerNameOrIndex });
         var prop = __navigateProperty(layer, propertyPath);
-        if (!prop) return JSON.stringify({ error: "Property not found: " + propertyPath });
+        if (!prop) return __JSON_stringify({ error: "Property not found: " + propertyPath });
 
-        var times = JSON.parse(timesJSON);
+        // Parse "[1.5,2.0,3.5]" without eval — timesJSON is always a flat number array
+        var timesRaw = timesJSON.replace(/^\s*\[\s*/, "").replace(/\s*\]\s*$/, "").split(",");
+        var times = [];
+        for (var ti = 0; ti < timesRaw.length; ti++) {
+            var n = parseFloat(timesRaw[ti]);
+            if (!isNaN(n)) times.push(n);
+        }
         var results = [];
         for (var i = 0; i < times.length; i++) {
             try {
@@ -288,9 +317,9 @@ function __bridge_evalExpressionAtTimes(compName, layerNameOrIndex, propertyPath
                 results.push({ time: times[i], value: null, error: e.toString() });
             }
         }
-        return JSON.stringify(results);
+        return __JSON_stringify(results);
     } catch (e) {
-        return JSON.stringify({ error: e.toString() });
+        return __JSON_stringify({ error: e.toString() });
     }
 }
 
@@ -300,7 +329,7 @@ function __bridge_validateJSXFile(filePath, dryRun) {
     try {
         var file = new File(filePath);
         if (!file.exists) {
-            return JSON.stringify({
+            return __JSON_stringify({
                 valid: false,
                 errors: ["File not found: " + filePath],
                 warnings: []
@@ -354,14 +383,14 @@ function __bridge_validateJSXFile(filePath, dryRun) {
             }
         }
 
-        return JSON.stringify({
+        return __JSON_stringify({
             valid: errors.length === 0,
             errors: errors,
             warnings: warnings,
             lines: code.split("\n").length
         });
     } catch (e) {
-        return JSON.stringify({ valid: false, errors: [e.toString()], warnings: [] });
+        return __JSON_stringify({ valid: false, errors: [e.toString()], warnings: [] });
     }
 }
 
@@ -398,9 +427,9 @@ function __bridge_getRenderQueue() {
                 duration: item.comp ? item.comp.workAreaDuration : 0
             });
         }
-        return JSON.stringify({ numItems: rq.numItems, items: items });
+        return __JSON_stringify({ numItems: rq.numItems, items: items });
     } catch (e) {
-        return JSON.stringify({ error: e.toString() });
+        return __JSON_stringify({ error: e.toString() });
     }
 }
 
@@ -409,7 +438,7 @@ function __bridge_getRenderQueue() {
 function __bridge_saveCompFrame(compName, time, outputPath) {
     try {
         var comp = __findComp(compName);
-        if (!comp) return JSON.stringify({ success: false, error: "Comp not found: " + compName });
+        if (!comp) return __JSON_stringify({ success: false, error: "Comp not found: " + compName });
 
         var outFile = new File(outputPath);
         // Ensure output directory exists
@@ -419,7 +448,7 @@ function __bridge_saveCompFrame(compName, time, outputPath) {
         // saveFrameToPng available in AE 2024+
         if (typeof comp.saveFrameToPng === "function") {
             comp.saveFrameToPng(time, outFile);
-            return JSON.stringify({
+            return __JSON_stringify({
                 success: true,
                 path: outFile.fsName,
                 width: comp.width,
@@ -427,13 +456,13 @@ function __bridge_saveCompFrame(compName, time, outputPath) {
                 time: time
             });
         } else {
-            return JSON.stringify({
+            return __JSON_stringify({
                 success: false,
                 error: "saveFrameToPng not available (requires AE 2024+)"
             });
         }
     } catch (e) {
-        return JSON.stringify({ success: false, error: e.toString() });
+        return __JSON_stringify({ success: false, error: e.toString() });
     }
 }
 
