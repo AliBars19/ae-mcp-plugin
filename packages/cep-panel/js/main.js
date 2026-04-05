@@ -261,6 +261,10 @@
 
     // ── Init ──
     log("Initializing AE MCP Bridge...", "info");
+    // Pre-create bridge secret so MCP server can read it on first connect
+    if (window.__bridgeAuth) {
+        window.__bridgeAuth.loadOrCreateSecret();
+    }
     loadDispatcher();
     startServer();
 })();

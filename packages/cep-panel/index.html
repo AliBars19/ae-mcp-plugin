@@ -8,8 +8,8 @@
         body {
             font-family: "Segoe UI", Arial, sans-serif;
             font-size: 12px;
-            background: #1e1e2e;
-            color: #cdd6f4;
+            background: #141414;
+            color: #d4d0c8;
             padding: 12px;
             overflow: hidden;
         }
@@ -20,12 +20,12 @@
             justify-content: space-between;
             margin-bottom: 12px;
             padding-bottom: 8px;
-            border-bottom: 1px solid #313244;
+            border-bottom: 1px solid #2a2a2a;
         }
         .header h1 {
             font-size: 14px;
             font-weight: 600;
-            color: #89b4fa;
+            color: #e8a849;
         }
 
         .status-row {
@@ -38,19 +38,19 @@
             width: 10px;
             height: 10px;
             border-radius: 50%;
-            background: #f38ba8;
+            background: #c45c5c;
             transition: background 0.3s;
         }
-        .status-dot.connected { background: #a6e3a1; }
+        .status-dot.connected { background: #6abf69; }
         .status-dot.reconnecting {
-            background: #f9e2af;
+            background: #e8a849;
             animation: pulse 1.5s ease-in-out infinite;
         }
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.4; }
         }
-        .status-label { color: #a6adc8; }
+        .status-label { color: #8a8680; }
 
         .stats {
             display: grid;
@@ -59,7 +59,8 @@
             margin-bottom: 12px;
         }
         .stat-box {
-            background: #313244;
+            background: #1e1e1e;
+            border: 1px solid #2a2a2a;
             border-radius: 6px;
             padding: 8px;
             text-align: center;
@@ -67,11 +68,11 @@
         .stat-value {
             font-size: 18px;
             font-weight: 700;
-            color: #89b4fa;
+            color: #e8a849;
         }
         .stat-label {
             font-size: 10px;
-            color: #a6adc8;
+            color: #8a8680;
             margin-top: 2px;
         }
 
@@ -80,26 +81,26 @@
         }
         .render-section h3 {
             font-size: 11px;
-            color: #a6adc8;
+            color: #b5a68a;
             margin-bottom: 4px;
         }
         .render-bar-bg {
             width: 100%;
             height: 8px;
-            background: #313244;
+            background: #1e1e1e;
             border-radius: 4px;
             overflow: hidden;
         }
         .render-bar-fill {
             height: 100%;
             width: 0%;
-            background: linear-gradient(90deg, #89b4fa, #a6e3a1);
+            background: linear-gradient(90deg, #e8a849, #6abf69);
             border-radius: 4px;
             transition: width 0.5s;
         }
         .render-status {
             font-size: 10px;
-            color: #a6adc8;
+            color: #8a8680;
             margin-top: 3px;
         }
 
@@ -108,12 +109,12 @@
         }
         .log-section h3 {
             font-size: 11px;
-            color: #a6adc8;
+            color: #b5a68a;
             margin-bottom: 4px;
         }
         .log-area {
-            background: #11111b;
-            border: 1px solid #313244;
+            background: #0c0c0c;
+            border: 1px solid #2a2a2a;
             border-radius: 6px;
             padding: 8px;
             font-family: "Cascadia Code", "Consolas", monospace;
@@ -122,17 +123,17 @@
             overflow-y: auto;
             white-space: pre-wrap;
             word-break: break-all;
-            color: #a6adc8;
+            color: #8a8680;
         }
-        .log-entry.error { color: #f38ba8; }
-        .log-entry.success { color: #a6e3a1; }
-        .log-entry.info { color: #89b4fa; }
+        .log-entry.error { color: #c45c5c; }
+        .log-entry.success { color: #6abf69; }
+        .log-entry.info { color: #e8a849; }
 
         .history-section { margin-bottom: 12px; }
-        .history-section h3 { font-size: 11px; color: #a6adc8; margin-bottom: 4px; }
+        .history-section h3 { font-size: 11px; color: #b5a68a; margin-bottom: 4px; }
         .history-area {
-            background: #11111b;
-            border: 1px solid #313244;
+            background: #0c0c0c;
+            border: 1px solid #2a2a2a;
             border-radius: 6px;
             padding: 6px;
             font-family: "Cascadia Code", "Consolas", monospace;
@@ -141,14 +142,14 @@
             overflow-y: auto;
         }
         .history-entry { padding: 2px 4px; border-radius: 3px; margin-bottom: 2px; }
-        .history-entry.success { color: #a6e3a1; }
-        .history-entry.error { color: #f38ba8; }
+        .history-entry.success { color: #6abf69; }
+        .history-entry.error { color: #c45c5c; }
     </style>
 </head>
 <body>
     <div class="header">
         <h1>AE MCP Bridge</h1>
-        <span id="version" style="font-size:10px; color:#585b70;">v0.1.0</span>
+        <span id="version" style="font-size:10px; color:#5a5650;">v0.1.0</span>
     </div>
 
     <div class="status-row">
@@ -170,7 +171,7 @@
     <div class="render-section" id="pipelineSection" style="display:none;">
         <h3>Apollova Pipeline</h3>
         <div class="render-bar-bg">
-            <div class="render-bar-fill" id="pipelineBar" style="background: linear-gradient(90deg, #cba6f7, #f5c2e7);"></div>
+            <div class="render-bar-fill" id="pipelineBar" style="background: linear-gradient(90deg, #e8a849, #c45c5c);"></div>
         </div>
         <div class="render-status" id="pipelineStatus">Idle</div>
     </div>
@@ -193,6 +194,7 @@
         <div class="log-area" id="logArea"></div>
     </div>
 
+    <script src="js/CSInterface.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/main.js"></script>
     <script src="js/dashboard.js"></script>
